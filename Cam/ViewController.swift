@@ -114,22 +114,83 @@ class ViewController: UIViewController,UIImagePickerControllerDelegate, UINaviga
         let upper : UInt32 = 500
         let randomNumber = arc4random_uniform(upper - lower) + lower
         configure_request(record: randomNumber)
-        makeGetCall()
+        makePostCall()
     }
     
     func configure_request(record: UInt32) {
         // Set up the URL request
-        let todoEndpoint: String = "https://jsonplaceholder.typicode.com/comments/" + String(record)
-        guard let url = URL(string: todoEndpoint) else {
+       // let todoEndpoint: String = "https://jsonplaceholder.typicode.com/comments/" + String(record)
+        let todosEndpoint: String = "https://jsonplaceholder.typicode.com/todos"
+        guard let todosURL = URL(string: todosEndpoint) else {
             print("Error: cannot create URL")
             return
         }
-        urlRequest = URLRequest(url: url)
         
-        self.labelProduct.text = "sending request ..."
-        self.labelProduct.backgroundColor = UIColor.orange
-      }
+        urlRequest = URLRequest(url: todosURL)
+        urlRequest?.httpMethod = "POST"
+        
+        let newTodo: [String: Any] = ["title": String(record), "completed": false, "userId": 1]
+        let jsonTodo: Data
+        do {
+            jsonTodo = try JSONSerialization.data(withJSONObject: newTodo, options: [])
+            urlRequest?.httpBody = jsonTodo
+        } catch {
+            print("Error: cannot create JSON from todo")
+            return
+        }
 
+        self.labelProduct.text = "  sending request ..."
+        self.labelProduct.backgroundColor = UIColor.orange
+    }
+
+    func makePostCall() {
+        let task = session?.dataTask(with: urlRequest!) {
+            (data, response, error) in
+            guard error == nil else {
+                print("error calling POST on /todos/1")
+                //print(error)
+                return
+            }
+            guard let responseData = data else {
+                print("Error: did not receive data")
+                return
+            }
+            
+            // parse the result as JSON, since that's what the API provides
+            do {
+                guard let receivedTodo =
+                    try JSONSerialization.jsonObject(with: responseData,
+                                                     options: []) as? [String: Any]
+                    else {
+                          print("Could not get JSON from responseData as dictionary")
+                          return
+                    }
+                print("The todo is: " + receivedTodo.description)
+                var keys = Array(receivedTodo.keys)
+                var d = self.convertToDictionary(text: keys[0])
+                guard let tt = d?["title"] as? String else {
+                    print("error")
+                    return
+                }
+                
+                guard let todoID = receivedTodo[keys[0]] as? String else {
+                    print("Could not get todoID as int from JSON")
+                    return
+                }
+                print("The ID is: \(todoID)")
+                DispatchQueue.main.async {
+                    self.labelProduct.backgroundColor = UIColor.lightGray
+                    self.classificationResult = "  Image classified as no. " + tt //String(todoID)
+                    self.labelProduct.text = self.classificationResult
+                }
+            } catch  {
+                print("error parsing response from POST on /todos")
+                return
+                }
+        }
+        task?.resume()
+    }
+    
     func makeGetCall() {
         // make the request
         let task = session?.dataTask(with: urlRequest!) {
@@ -177,5 +238,15 @@ class ViewController: UIViewController,UIImagePickerControllerDelegate, UINaviga
         task?.resume()
     }
     
+    func convertToDictionary(text: String) -> [String: Any]? {
+        if let data = text.data(using: .utf8) {
+            do {
+                return try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
+            } catch {
+                print(error.localizedDescription)
+            }
+        }
+        return nil
+    }
 }
 
