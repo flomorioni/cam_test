@@ -23,6 +23,9 @@ class ViewController: UIViewController,UIImagePickerControllerDelegate, UINaviga
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         //configure_request()
+        // set up the session
+        // let config = URLSessionConfiguration.default
+        session = URLSession.shared //URLSession(configuration: config)
     }
 
     override func didReceiveMemoryWarning() {
@@ -123,10 +126,9 @@ class ViewController: UIViewController,UIImagePickerControllerDelegate, UINaviga
         }
         urlRequest = URLRequest(url: url)
         
-        // set up the session
-       // let config = URLSessionConfiguration.default
-        session = URLSession.shared //URLSession(configuration: config)
-    }
+        self.labelProduct.text = "sending request ..."
+        self.labelProduct.backgroundColor = UIColor.orange
+      }
 
     func makeGetCall() {
         // make the request
@@ -160,8 +162,12 @@ class ViewController: UIViewController,UIImagePickerControllerDelegate, UINaviga
                     return
                 }
                 
-                self.classificationResult = "The output is: " + todoTitle
-                self.labelProduct.text = self.classificationResult
+                DispatchQueue.main.async {
+                    self.labelProduct.backgroundColor = UIColor.lightGray
+                    self.classificationResult = "The output is: " + todoTitle
+                    self.labelProduct.text = self.classificationResult
+                }
+                
             } catch  {
                 print("error trying to convert data to JSON")
                 return
